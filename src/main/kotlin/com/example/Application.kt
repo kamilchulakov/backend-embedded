@@ -1,7 +1,9 @@
 package com.example
 
+import com.example.CodeNames.stop
 import com.example.cache.InMemoryConnections
 import com.example.cache.InMemoryModel
+import com.example.cache.StopRemote
 import com.example.cache.toRemote
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
@@ -17,6 +19,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+
+object CodeNames {
+    val stop = "STOP"
+}
 
 fun main() {
     runBlocking {
@@ -37,32 +43,50 @@ fun main() {
 
         val selectorManager = SelectorManager(Dispatchers.IO)
         val serverSocket = aSocket(selectorManager).tcp().bind(InetSocketAddress(hst, prt))
-        val socket = serverSocket.accept()
-        println("Socket accepted: ${socket.remoteAddress}")
-        val receiveChannel = socket.openReadChannel()
-        launch(Dispatchers.IO) {
 
+        launch(Dispatchers.IO) {
             while (true) {
-                val answer = receiveChannel.readUTF8Line()
-                if (answer != null) {
-                    println("ANSWER: $answer")
-                    println(InMemoryConnections.connections)
-                    val params = answer.split(" ").map { it.toInt() }
-                    InMemoryModel.X.add(params[0])
-                    InMemoryModel.Y.add(params[1])
-                    InMemoryModel.Z.add(params[2])
-                    launch {
-                        InMemoryConnections.connections
-                            .forEach {
-                                it.session.sendSerializedBase(
-                                    InMemoryModel.toRemote(),
-                                    KotlinxWebsocketSerializationConverter(
-                                        Json
-                                    ), Charsets.UTF_8
-                                )
-                                println("Send ${it.name}")
-                            }
-                    }.join()
+                val socket = serverSocket.accept()
+                println("Socket accepted: ${socket.remoteAddress}")
+                val receiveChannel = socket.openReadChannel()
+
+                while (true) {
+                    val answer = receiveChannel.readUTF8Line()
+                    if (answer != null) {
+                        println("ANSWER: $answer")
+                        if (answer.contains(stop)) {
+                            launch {
+                                InMemoryConnections.connections
+                                    .forEach {
+                                        it.session.sendSerializedBase(
+                                            StopRemote(),
+                                            KotlinxWebsocketSerializationConverter(
+                                                Json
+                                            ), Charsets.UTF_8
+                                        )
+                                        println("SEND TO: ${it.name}")
+                                    }
+                            }.join()
+                        } else {
+                            println(InMemoryConnections.connections)
+                            val params = answer.split(" ").map { it.toInt() }
+                            InMemoryModel.X.add(params[0])
+                            InMemoryModel.Y.add(params[1])
+                            InMemoryModel.Z.add(params[2])
+                            launch {
+                                InMemoryConnections.connections
+                                    .forEach {
+                                        it.session.sendSerializedBase(
+                                            InMemoryModel.toRemote(),
+                                            KotlinxWebsocketSerializationConverter(
+                                                Json
+                                            ), Charsets.UTF_8
+                                        )
+                                        println("SEND TO: ${it.name}")
+                                    }
+                            }.join()
+                        }
+                    } else break
                 }
             }
         }

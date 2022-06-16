@@ -19,3 +19,8 @@ data class ModelRemote(
     val z: List<Int> = emptyList()
 )
 
+@Serializable
+data class StopRemote(
+    val type: Int = 1
+)
+
