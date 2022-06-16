@@ -30,7 +30,11 @@ fun Application.configureSockets() {
         webSocket("/") {
             val thisConnection = Connection(this)
             connections.add(thisConnection)
-            sendSerialized(InMemoryModel.toRemote())
+            for(frame in incoming) {
+                frame as? Frame.Text ?: continue
+                val receivedText = frame.readText()
+                // println("You said: $receivedText")
+            }
         }
     }
 }
