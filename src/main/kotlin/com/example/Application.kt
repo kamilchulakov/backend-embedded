@@ -55,6 +55,9 @@ fun main() {
                     if (answer != null) {
                         println("ANSWER: $answer")
                         if (answer.contains(stop)) {
+                            InMemoryModel.X.clear()
+                            InMemoryModel.Y.clear()
+                            InMemoryModel.Z.clear()
                             launch {
                                 InMemoryConnections.connections
                                     .forEach {
