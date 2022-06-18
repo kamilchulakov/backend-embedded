@@ -1,5 +1,8 @@
 package com.example
 
+import com.example.CodeNames.delayToShow
+import com.example.CodeNames.hst
+import com.example.CodeNames.prt
 import com.example.CodeNames.stop
 import com.example.cache.InMemoryConnections
 import com.example.cache.InMemoryModel
@@ -19,19 +22,18 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import java.io.File
 
 object CodeNames {
     val stop = "STOP"
+    val hst = "192.168.43.200"
+    val lst = "192.168.43.89"
+    const val prt = 9090
+    const val delayToShow = 5000L
 }
 
 fun main() {
     runBlocking {
-        println("Введите адрес сервера")
-        val hst = "192.168.43.200"
-        println("Введите адрес апельсинки")
-        val lst = "192.168.43.89"
-        println("Введите порт апельсинки")
-        val prt = 9090
 
         launch(Dispatchers.IO) {
             println("Включаю вебсокет сервер для фронта")
@@ -53,31 +55,11 @@ fun main() {
                 while (true) {
                     val answer = receiveChannel.readUTF8Line()
                     if (answer != null) {
-                        println("ANSWER: $answer")
+//                        println("ANSWER: $answer")
                         if (answer.contains(stop)) {
-                            InMemoryModel.X.clear()
-                            InMemoryModel.Y.clear()
-                            InMemoryModel.Z.clear()
                             launch {
                                 InMemoryConnections.connections
-                                    .forEach {
-                                        it.session.sendSerializedBase(
-                                            StopRemote(),
-                                            KotlinxWebsocketSerializationConverter(
-                                                Json
-                                            ), Charsets.UTF_8
-                                        )
-                                        println("SEND TO: ${it.name}")
-                                    }
-                            }.join()
-                        } else {
-                            println(InMemoryConnections.connections)
-                            val params = answer.split(" ").map { it.toInt() }
-                            InMemoryModel.X.add(params[0])
-                            InMemoryModel.Y.add(params[1])
-                            InMemoryModel.Z.add(params[2])
-                            launch {
-                                InMemoryConnections.connections
+                                    .drop(InMemoryConnections.connections.size-1)
                                     .forEach {
                                         it.session.sendSerializedBase(
                                             InMemoryModel.toRemote(),
@@ -86,8 +68,48 @@ fun main() {
                                             ), Charsets.UTF_8
                                         )
                                         println("SEND TO: ${it.name}")
+                                        it.session.sendSerializedBase(
+                                            StopRemote(),
+                                            KotlinxWebsocketSerializationConverter(
+                                                Json
+                                            ), Charsets.UTF_8
+                                        )
+                                        println("SEND TO: ${it.name} STOP")
                                     }
+                                File("somefile7.txt").printWriter().use { out ->
+                                    for (idx in InMemoryModel.X.indices) {
+                                        out.println("${InMemoryModel.X[idx]} ${InMemoryModel.Y[idx]} ${InMemoryModel.Z[idx]}")
+                                    }
+                                }
                             }.join()
+
+                            InMemoryModel.X.clear()
+                            InMemoryModel.Y.clear()
+                            InMemoryModel.Z.clear()
+
+                            break
+
+                        } else {
+                            val params = answer.split(" ").map { it.toDouble() }
+                            InMemoryModel.X.add(params[0])
+                            InMemoryModel.Y.add(params[1])
+                            InMemoryModel.Z.add(params[2])
+                            // если точки приходят часто, то можно юзать делей, но делей гавно.
+//                            if (InMemoryModel.X.size % 5000 == 0) launch {
+//
+//                                InMemoryConnections.connections
+//                                    .drop(InMemoryConnections.connections.size - 1)
+//                                    .forEach {
+//                                        it.session.sendSerializedBase(
+//                                            InMemoryModel.toRemote(),
+//                                            KotlinxWebsocketSerializationConverter(
+//                                                Json
+//                                            ), Charsets.UTF_8
+//                                        )
+//                                    }
+//                                delay(delayToShow)
+//                            }.join()
+
                         }
                     } else break
                 }
