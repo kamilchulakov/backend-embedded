@@ -26,7 +26,7 @@ import java.io.File
 
 object CodeNames {
     val stop = "STOP"
-    val hst = "192.168.43.200"
+    val hst = "192.168.0.5"
     val lst = "192.168.43.89"
     const val prt = 9090
     const val delayToShow = 5000L
