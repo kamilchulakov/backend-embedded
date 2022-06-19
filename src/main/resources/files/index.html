@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Viewer</title>
+    <script src="https://cdn.plot.ly/plotly-2.12.1.min.js"></script>
+</head>
+<body>
+
+<div id="plots" style="display: flex; flex-flow: row; flex-wrap: wrap-reverse; justify-content: space-around">
+    <div style="width:800px;height:860px; border: 1px black solid" >
+        <p>№1</p>
+        <div id="tester" style="width:800px;height:800px;"></div>
+    </div>
+</div>
+<script type="module">
+    const ws = new WebSocket("ws://192.168.43.200:8000");
+    ws.onmessage = (message) => {
+        const updated = JSON.parse(message.data);
+        console.log(updated)
+        if (updated.x === undefined || updated === 1) {
+            const testerDiv = document.createElement("div");
+            testerDiv.style.width = "800px";
+            testerDiv.style.height = "800px";
+            testerDiv.id = "tester"+idx
+            const numP = document.createElement("p");
+            numP.textContent = "№" + idx
+            const divWithNum = document.createElement("div");
+            divWithNum.appendChild(numP)
+            divWithNum.appendChild(testerDiv)
+            divWithNum.style.width = "800px";
+            divWithNum.style.height = "860px";
+            divWithNum.style.border = "1px black solid";
+
+            document.getElementById("plots").appendChild(
+                divWithNum
+            );
+            TESTER = document.getElementById("tester"+idx);
+            idx++;
+            arrX = []
+            arrY = []
+            arrZ = []
+        } else {
+            arrX = Array.from(updated.x)
+            arrY = Array.from(updated.y)
+            arrZ = Array.from(updated.z)
+        }
+        updatePlot()
+    }
+    let TESTER = document.getElementById('tester');
+    let arrX = [0]
+    let arrY = [0]
+    let arrZ = [0]
+    let idx = 2
+
+    const updatePlot = ()=>{
+
+        Plotly.newPlot(TESTER, [{
+
+            x: arrX,
+            y: arrY,
+            z: arrZ,
+            type: "scatter3d",
+            mode: 'markers',
+            marker: {
+                size: 1,
+                opacity: 0.5
+            }
+        }], {
+
+            margin: {t: 0}
+        });
+    }
+    updatePlot()
+
+</script>
+</body>
+</html>
